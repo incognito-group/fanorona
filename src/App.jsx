@@ -1,59 +1,135 @@
-import React from 'react';
+import React, { useState } from 'react';
+import GameHeader from './components/GameHeader';
+import MainMenu from './components/MainMenu';
+import WinAlert from './components/WinAlert';
+import GameBoard from './components/GameBoard';
+import { ADJACENCY_MAP } from './constants/gameRules';
+import { checkWinCondition } from './core/gameLogic';
 
 export default function App() {
+  const [gameMode, setGameMode] = useState(null); 
+  const [board, setBoard] = useState(Array(9).fill(null));
+  const [currentPlayer, setCurrentPlayer] = useState('P1'); 
+  const [gamePhase, setGamePhase] = useState('Placement'); 
+  const [selectedPiece, setSelectedPiece] = useState(null);
+  const [winner, setWinner] = useState(null);
+
+  const totalPlaced = board.filter(cell => cell !== null).length;
+
+  const handleNodeClick = (index) => {
+    if (winner) return;
+    if (gamePhase === 'Placement') handlePlacement(index);
+    else if (gamePhase === 'Movement') handleMovement(index);
+  };
+
+  const handlePlacement = (index) => {
+    if (board[index] !== null) return;
+
+    const newBoard = [...board];
+    newBoard[index] = currentPlayer;
+    setBoard(newBoard);
+
+    if (checkWinCondition(newBoard, currentPlayer)) {
+      setWinner(currentPlayer);
+      return;
+    }
+
+    if (totalPlaced + 1 === 6) {
+      setGamePhase('Movement');
+    }
+
+    setCurrentPlayer(currentPlayer === 'P1' ? 'P2' : 'P1');
+  };
+
+  const handleMovement = (index) => {
+    const clickedCell = board[index];
+
+    if (selectedPiece === null) {
+      if (clickedCell === currentPlayer) setSelectedPiece(index);
+      return;
+    }
+
+    if (index === selectedPiece) {
+      setSelectedPiece(null);
+      return;
+    }
+
+    if (clickedCell === null) {
+      const validMoves = ADJACENCY_MAP[selectedPiece];
+      if (validMoves.includes(index)) {
+        const newBoard = [...board];
+        newBoard[selectedPiece] = null;
+        newBoard[index] = currentPlayer;
+        setBoard(newBoard);
+        setSelectedPiece(null);
+
+        if (checkWinCondition(newBoard, currentPlayer)) {
+          setWinner(currentPlayer);
+          return;
+        }
+
+        setCurrentPlayer(currentPlayer === 'P1' ? 'P2' : 'P1');
+      }
+    } else if (clickedCell === currentPlayer) {
+      setSelectedPiece(index);
+    }
+  };
+
+  const resetGame = () => {
+    setBoard(Array(9).fill(null));
+    setCurrentPlayer('P1');
+    setGamePhase('Placement');
+    setSelectedPiece(null);
+    setWinner(null);
+  };
+
   return (
-    <div className="flex flex-col justify-between items-center min-h-screen p-6 bg-[#121214] font-sans antialiased">
-      
-      {/* Header */}
-      <header className="w-full max-w-4xl flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-zinc-800 pb-4 text-xs tracking-wider text-zinc-400 uppercase">
-        <div className="flex items-center gap-2">
-          <span className="font-bold text-zinc-200">ISPM</span>
-          <span className="text-zinc-200">|</span>
-          <span>Travaux Pratiques</span>
-        </div>
-        <div className="text-zinc-200 font-mono">
-          Matière : Algorithme avancé
-        </div>
-      </header>
+    <div className="w-full max-w-4xl flex flex-col items-center gap-8 py-8 px-4 bg-zinc-50 min-h-screen text-zinc-800">
+      <GameHeader />
 
-      <main className="w-full max-w-xl my-auto p-8 bg-[#1a1a1e] border border-zinc-800 rounded-lg shadow-sm">
-        {/* Wireframe Diagram */}
-        <div className="flex justify-center mb-8">
-          <div className="relative w-24 h-24 border border-zinc-700 bg-[#121214]">
-            {/* Structural Alignment Lines */}
-            <div className="absolute top-1/2 left-0 w-full h-[1px] bg-zinc-700 -translate-y-1/2"></div>
-            <div className="absolute left-1/2 top-0 w-[1px] h-full bg-zinc-700 -translate-x-1/2"></div>
-            <div className="absolute top-0 left-0 w-[141%] h-[1px] bg-zinc-700 rotate-45 origin-top-left"></div>
-            <div className="absolute top-0 right-0 w-[141%] h-[1px] bg-zinc-700 -rotate-45 origin-top-right"></div>
-            
-            {/* Intersection Nodes */}
-            <div className="absolute w-2 h-2 bg-zinc-500 rounded-full top-0 left-0 -translate-x-1/2 -translate-y-1/2"></div>
-            <div className="absolute w-2 h-2 bg-zinc-500 rounded-full top-0 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
-            <div className="absolute w-2 h-2 bg-zinc-500 rounded-full top-0 left-full -translate-x-1/2 -translate-y-1/2"></div>
-            <div className="absolute w-2 h-2 bg-zinc-500 rounded-full top-1/2 left-0 -translate-x-1/2 -translate-y-1/2"></div>
-            <div className="absolute w-2 h-2 bg-zinc-400 rounded-full top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
-            <div className="absolute w-2 h-2 bg-zinc-500 rounded-full top-1/2 left-full -translate-x-1/2 -translate-y-1/2"></div>
-            <div className="absolute w-2 h-2 bg-zinc-500 rounded-full top-full left-0 -translate-x-1/2 -translate-y-1/2"></div>
-            <div className="absolute w-2 h-2 bg-zinc-500 rounded-full top-full left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
-            <div className="absolute w-2 h-2 bg-zinc-500 rounded-full top-full left-full -translate-x-1/2 -translate-y-1/2"></div>
+      {gameMode === null ? (
+        <MainMenu onSelectMode={setGameMode} />
+      ) : (
+        <main className="w-full max-w-md flex flex-col items-center bg-white border border-zinc-200 rounded-lg p-6 shadow-sm animate-[fadeIn_0.4s_ease-out]">
+          <WinAlert winner={winner} />
+
+          <div className="w-full flex justify-between items-center mb-6 text-sm font-mono">
+            <div>
+              <span className="text-zinc-400">Phase:</span>{' '}
+              <span className="text-zinc-700 font-semibold uppercase">{gamePhase}</span>
+            </div>
+            {!winner && (
+              <div>
+                <span className="text-zinc-400">Tour:</span>{' '}
+                <span className={`font-bold ${currentPlayer === 'P1' ? 'text-emerald-600' : 'text-zinc-800'}`}>
+                  {currentPlayer === 'P1' ? 'Joueur 1 (Vert)' : 'Joueur 2 (Noir)'}
+                </span>
+              </div>
+            )}
           </div>
-        </div>
 
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-100 mb-2">
-          Fanoron-t3lo
-        </h1>
+          <GameBoard 
+            board={board} 
+            selectedPiece={selectedPiece} 
+            onNodeClick={handleNodeClick} 
+          />
 
-        <hr className="border-zinc-700 my-8" />
-
-        {/* Console-style Status Bar */}
-        <div className="bg-[#121214] border border-zinc-800 p-3 rounded font-mono text-xs text-left text-zinc-400 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-            <span>status: IN_DEVELOPMENT</span>
+          <div className="w-full flex gap-3 mt-6">
+            <button
+              onClick={resetGame}
+              className="flex-1 py-2 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-600 text-xs font-mono rounded uppercase tracking-wider transition-colors"
+            >
+              Recommencer
+            </button>
+            <button
+              onClick={() => { resetGame(); setGameMode(null); }}
+              className="px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-500 text-xs font-mono rounded uppercase tracking-wider transition-colors"
+            >
+              Menu
+            </button>
           </div>
-          <span className="text-zinc-600">v1.0.0</span>
-        </div>
-      </main>
+        </main>
+      )}
     </div>
   );
 }
