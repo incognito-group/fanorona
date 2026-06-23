@@ -14,10 +14,60 @@ export default function App() {
   const [selectedPiece, setSelectedPiece] = useState(null);
   const [winner, setWinner] = useState(null);
 
-  const totalPlaced = board.filter(cell => cell !== null).length;
+  const triggerAIMove = async (currentBoard, currentPhase) => {
+    try {
+      const response = await fetch('/api/get-move', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          board1D: currentBoard,
+          difficulty: 'difficile', 
+          phase: currentPhase === 'Placement' ? 1 : 2,
+          aiPlayer: 2 
+        })
+      });
+
+      const data = await response.json();
+      if (!data.hasMove) return;
+
+      const nextBoard = [...currentBoard];
+
+      if (currentPhase === 'Placement') {
+        nextBoard[data.index] = 'P2';
+        setBoard(nextBoard);
+        
+        if (checkWinCondition(nextBoard, 'P2')) {
+          setWinner('P2');
+          return;
+        }
+        
+        const totalPieces = nextBoard.filter(cell => cell !== null).length;
+        if (totalPieces === 6) {
+          setGamePhase('Movement');
+        }
+        
+        setCurrentPlayer('P1');
+      } else {
+        nextBoard[data.fromIndex] = null;
+        nextBoard[data.toIndex] = 'P2';
+        setBoard(nextBoard);
+
+        if (checkWinCondition(nextBoard, 'P2')) {
+          setWinner('P2');
+          return;
+        }
+        
+        setCurrentPlayer('P1');
+      }
+    } catch (error) {
+      console.error("Failed to fetch AI move:", error);
+    }
+  };
 
   const handleNodeClick = (index) => {
-    if (winner) return;
+    // Bloquer les clics si la partie est finie ou si c'est au tour de l'IA
+    if (winner || (gameMode === 'ai' && currentPlayer === 'P2')) return;
+    
     if (gamePhase === 'Placement') handlePlacement(index);
     else if (gamePhase === 'Movement') handleMovement(index);
   };
@@ -34,11 +84,22 @@ export default function App() {
       return;
     }
 
-    if (totalPlaced + 1 === 6) {
+    // Correction de calcul : utiliser l'état du nouveau plateau simulé
+    const updatedTotalPlaced = newBoard.filter(cell => cell !== null).length;
+    let nextPhase = gamePhase;
+    if (updatedTotalPlaced === 6) {
+      nextPhase = 'Movement';
       setGamePhase('Movement');
     }
 
-    setCurrentPlayer(currentPlayer === 'P1' ? 'P2' : 'P1');
+    if (gameMode === 'ai') {
+      // C'est au tour de l'IA, on passe à P2 et on déclenche l'appel API immédiatement
+      setCurrentPlayer('P2');
+      triggerAIMove(newBoard, nextPhase);
+    } else {
+      // Mode local classique à 2 joueurs
+      setCurrentPlayer(currentPlayer === 'P1' ? 'P2' : 'P1');
+    }
   };
 
   const handleMovement = (index) => {
@@ -68,7 +129,12 @@ export default function App() {
           return;
         }
 
-        setCurrentPlayer(currentPlayer === 'P1' ? 'P2' : 'P1');
+        if (gameMode === 'ai') {
+          setCurrentPlayer('P2');
+          triggerAIMove(newBoard, gamePhase);
+        } else {
+          setCurrentPlayer(currentPlayer === 'P1' ? 'P2' : 'P1');
+        }
       }
     } else if (clickedCell === currentPlayer) {
       setSelectedPiece(index);
@@ -102,7 +168,7 @@ export default function App() {
               <div>
                 <span className="text-zinc-400">Tour:</span>{' '}
                 <span className={`font-bold ${currentPlayer === 'P1' ? 'text-emerald-600' : 'text-zinc-800'}`}>
-                  {currentPlayer === 'P1' ? 'Joueur 1 (Vert)' : 'Joueur 2 (Noir)'}
+                  {currentPlayer === 'P1' ? 'Joueur 1 (Vert)' : 'Joueur 2 (IA / Noir)'}
                 </span>
               </div>
             )}
