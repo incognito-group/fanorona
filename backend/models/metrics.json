@@ -1,0 +1,6 @@
+{
+  "accuracy": 0.9885758651286601,
+  "epochs": 50,
+  "training_time_sec": 27.561594486236572,
+  "dataset_size": 60105
+}
