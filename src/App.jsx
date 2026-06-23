@@ -40,7 +40,7 @@ export default function App() {
         </div>
 
         <h1 className="text-2xl font-semibold tracking-tight text-zinc-100 mb-2">
-          Fanoron-3 
+          FANORON-T3LO
         </h1>
 
         <hr className="border-zinc-700 my-8" />

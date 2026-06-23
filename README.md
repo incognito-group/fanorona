@@ -1,6 +1,6 @@
 # Section 1 : En-tête Institutionnel et Identification
 * **Lien hypertexte :** [Institut Supérieur Polytechnique de Madagascar](https://www.ispm-edu.com)
-* **Nom du groupe de projet :** [Incognito]
+* **Nom du groupe de projet :** Incognito
 
 ### Tableau des membres de l'équipe :
 | Nom complet | Numéro | Classe | Rôle |
@@ -18,8 +18,8 @@
 * **Architecture et Pile (Stack) technologique :**
   * **Frontend :** React.js (initialisé avec Vite) pour une interface réactive et performante.
   * **Styling :** Tailwind CSS (via CDN) pour un design épuré, minimaliste et rigoureux.
-  * **Algorithme / Moteur d'IA :** [ Python (FastAPI)].
-* **Lien vers la version hébergée :** [...comming soon]
+  * **Algorithme / Moteur d'IA :** Python (FastAPI).
+* **Lien vers la version hébergée :** https://fanorona-omega.vercel.app
 
 ---
 
