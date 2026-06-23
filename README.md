@@ -3,13 +3,13 @@
 * **Nom du groupe de projet :** [Incognito]
 
 ### Tableau des membres de l'équipe :
-| Nom Complet | Numéro d'étudiant | Classe | Rôle précis pour ce Hackathon |
+| Nom complet | Numéro | Classe | Rôle |
 | :--- | :--- | :--- | :--- |
-| [RAKOTOMALALA Princy] | [N° 04] | IGGLIA 4A | Machine Learning |
-| [RANDRIATAHINARIMANANA Tendry Ny Avo Gabriel] | [N° 18] | IGGLIA 4A | Backend |
-| [NOMENJANAHARY Nambinintsoa Gilbert] | [N° 21] | Master 1 | Backend |
-| [RABENJARISON Fenomalala Safidy] | [N° 23] | IGGLIA 4A | Machine Learning |
-| [SAROBIDINIRINA Tsizehena Bienvenue] | [N° 58] | IGGLIA 4A | Frontend / DevOps |
+| RAKOTOMALALA Princy | N° 04 | IGGLIA 4A | Machine Learning |
+| RANDRIATAHINARIMANANA Tendry Ny Avo Gabriel | N° 18 | IGGLIA 4A | Backend |
+| NOMENJANAHARY Nambinintsoa Gilbert | N° 21 | Master 1 | Backend |
+| RABENJARISON Fenomalala Safidy | N° 23 | IGGLIA 4A | Machine Learning |
+| SAROBIDINIRINA Tsizehena Bienvenue | N° 58 | IGGLIA 4A | Frontend / DevOps |
 
 ---
 
