@@ -19,7 +19,7 @@
   * **Frontend :** React.js (initialisé avec Vite) pour une interface réactive et performante.
   * **Styling :** Tailwind CSS (via CDN) pour un design épuré, minimaliste et rigoureux.
   * **Algorithme / Moteur d'IA :** Python (FastAPI).
-* **Lien vers la version hébergée :** https://fanorona-omega.vercel.app
+* **Lien vers la version hébergée :** https://fanorona-wheat.vercel.app/
 
 ---
 
