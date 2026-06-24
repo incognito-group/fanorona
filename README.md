@@ -8,7 +8,7 @@
 | RAKOTOMALALA Princy | N° 04 | IGGLIA 4A | Backend / Algo |
 | RANDRIATAHINARIMANANA Tendry Ny Avo Gabriel | N° 18 | IGGLIA 4A | Backend / Algo |
 | NOMENJANAHARY Nambinintsoa Gilbert | N° 21 | Master 1 | Backend / Algo |
-| RABENJARISON Fenomalala Safidy | N° 23 | IGGLIA 4A | Expert Backend / Algo |
+| RABENJARISON Fenomalala Safidy | N° 23 | IGGLIA 4A | Backend / Algo |
 | SAROBIDINIRINA Tsizehena Bienvenue | N° 58 | IGGLIA 4A | Frontend / DevOps |
 
 ---
