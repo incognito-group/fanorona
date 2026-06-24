@@ -1,30 +1,42 @@
 # Section 1 : En-tête Institutionnel et Identification
-* **Lien hypertexte :** [Institut Supérieur Polytechnique de Madagascar](https://www.ispm-edu.com)
+
+* **Institut :** [Institut Supérieur Polytechnique de Madagascar](https://www.ispm-edu.com)
 * **Nom du groupe de projet :** Incognito
 
-### Tableau des membres de l'équipe :
-| Nom complet | Numéro | Classe | Rôle |
+| Nom Complet | Numéro d'étudiant | Classe | Rôle précis pour ce Hackathon |
 | :--- | :--- | :--- | :--- |
-| RAKOTOMALALA Princy | N° 04 | IGGLIA 4A | Machine Learning |
-| RANDRIATAHINARIMANANA Tendry Ny Avo Gabriel | N° 18 | IGGLIA 4A | Backend |
-| NOMENJANAHARY Nambinintsoa Gilbert | N° 21 | Master 1 | Backend |
-| RABENJARISON Fenomalala Safidy | N° 23 | IGGLIA 4A | Machine Learning |
-| SAROBIDINIRINA Tsizehena Bienvenue | N° 58 | IGGLIA 4A | Frontend / DevOps |
+| RAKOTOMALALA Princy | N° 04 | IGGLIA 4A | Lead AI |
+| RANDRIATAHINARIMANANA Tendry Ny Avo Gabriel | N° 18 | IGGLIA 4A | Backend Architect |
+| NOMENJANAHARY Nambinintsoa Gilbert | N° 21 | Master 1 | Expert règles du jeu |
+| RABENJARISON Fenomalala Safidy | N° 23 | IGGLIA 4A | Expert optimisation Alpha-Beta |
+| SAROBIDINIRINA Tsizehena Bienvenue | N° 58 | IGGLIA 4A | Frontend / Lead DevOps |
 
 ---
 
 # Section 2 : Description du Travail Réalisé
-* **Présentation globale :** Application web interactive permettant de jouer au **Fanoron-telo**, un jeu de société traditionnel originaire de Madagascar. L'interface gère l'état du jeu sur un plateau de 3x3 intersections connectées, incluant la Phase 1 (Placement alterné des 6 pions) et la Phase 2 (Déplacement vers les intersections adjacentes libres).
-* **Architecture et Pile (Stack) technologique :**
-  * **Frontend :** React.js (initialisé avec Vite) pour une interface réactive et performante.
-  * **Styling :** Tailwind CSS (via CDN) pour un design épuré, minimaliste et rigoureux.
-  * **Algorithme / Moteur d'IA :** Python (FastAPI).
-* **Lien vers la version hébergée :** https://fanorona-wheat.vercel.app/
+
+Nous avons développé une application web interactive de **Fanoron-telo**, jouable sur un plateau 3x3 avec les deux phases officielles : placement des 6 pions, puis déplacement vers les intersections adjacentes libres. La partie se termine immédiatement lorsqu'un joueur aligne ses 3 pions sur une ligne, une colonne ou une diagonale.
+
+Fonctionnalités implémentées :
+
+* Mode **Humain vs Humain** en local.
+* Mode **Humain vs IA** avec trois niveaux : facile, moyenne et difficile.
+* Mode **IA vs IA** pour démontrer automatiquement les décisions de l'IA.
+* Gestion robuste des règles : placement, mouvement adjacent, changement de phase, détection de victoire.
+* Options bonus : **Undo/Redo**, animations légères, affichage du temps de réponse de l'IA.
+
+Architecture et pile technologique :
+
+* **Frontend :** React avec Vite.
+* **Interface :** Tailwind CSS via CDN pour un rendu rapide, clair et responsive.
+* **IA locale :** JavaScript, utilisé comme fallback afin que le jeu reste jouable avec `npm run dev`.
+* **IA déployée :** fonction Python FastAPI dans `api/`, compatible Vercel Serverless.
+
+**Lien vers la version hébergée :** https://fanorona-wheat.vercel.app/
 
 ---
 
 # Section 3 : Guide d'Installation Rapide (3 Commandes Max)
-Procédure pas-à-pas pour cloner, installer les dépendances et lancer l'application en local.
 
 ```bash
 git clone https://github.com/incognito-group/fanorona
@@ -32,23 +44,72 @@ npm install
 npm run dev
 ```
 
+---
+
+# Section 4 : Outils d'Aide IA Utilisés
+
+L'équipe a utilisé des assistants IA comme ChatGPT et GitHub Copilot pour accélérer les parties répétitives du hackathon, tout en gardant la validation humaine sur les règles du Fanoron-telo.
+
+Utilisations principales :
+
+* Génération rapide de structures React et composants d'interface.
+* Aide à la formulation du Minimax, de l'Alpha-Beta et de la fonction d'évaluation.
+* Débogage des transitions entre phase de placement et phase de mouvement.
+* Génération de tests mentaux et de scénarios de victoire.
+* Rédaction et amélioration de la documentation du projet.
+
+Le gain principal a été la réduction du temps passé sur le boilerplate et les explications, ce qui a permis de concentrer l'équipe sur la jouabilité, les règles et l'IA.
+
+---
+
 # Section 5 : Modélisation et Algorithmes de l'IA du Jeu
 
-* **Représentation de l'état du plateau :** Nous avons choisi une approche matricielle (grille matricielle 3×3) où chaque intersection est repérée par ses coordonnées $(i, j)$ avec $i, j \in \{0, 1, 2\}$. Cette approche correspond fidèlement à la géométrie réelle du plateau et permet des calculs mathématiques directs pour les règles de déplacement, évitant ainsi l'utilisation de listes simples ou de structures de données lourdes.
+**Représentation de l'état du plateau :** le frontend représente le plateau par un tableau 1D de 9 cases (`P1`, `P2` ou `null`). L'API Python convertit ce tableau en matrice 3x3 pour faciliter les calculs de coordonnées. Les lignes gagnantes sont stockées dans une liste de 8 combinaisons : 3 lignes, 3 colonnes et 2 diagonales.
 
-* **Validation géométrique des mouvements :**
-  Au lieu d'utiliser un dictionnaire statique écrit à la main, les connexions physiques du Fanoron-telo sont calculées dynamiquement par l'algorithme. Celui-ci vérifie les distances de Manhattan et de Tchebychev pour s'assurer que le déplacement ne dépasse pas une case.
-  Cette vérification est combinée à une condition de parité mathématique : un déplacement diagonal n'est autorisé que si la somme des coordonnées de la case de départ respecte la condition $(i1 + j1) \pmod 2 == 0$. Cela restreint géométriquement et automatiquement les diagonales au centre $(1,1)$ et aux quatre coins, conformément au dessin traditionnel du jeu.
+**Validation des mouvements :** en phase de placement, toute case libre est valide. En phase de mouvement, un pion ne peut aller que vers une intersection adjacente libre. Les connexions du plateau sont représentées par une table d'adjacence côté React et par une fonction géométrique côté Python.
 
-* **Fonctionnement du Minimax et fonction d'évaluation :**
-  Notre fonction d'évaluation mathématique attribue un score numérique à chaque état final ou intermédiaire du plateau :
-  * **Score +1000 (Gain maximum) :** Si l'état mène à un alignement de 3 pions de l'IA (Victoire).
-  * **Score -1000 (Pénalité maximum) :** Si l'état permet un alignement de 3 pions de l'adversaire humain (Défaite).
-  * **Score 0 (Neutre) :** Si la configuration actuelle ne présente aucun alignement gagnant à ce stade de l'arbre.
-  L'objectif de l'algorithme Minimax est de maximiser ce score pour l'IA tout en supposant que l'adversaire cherchera à le minimiser.
+**Niveaux d'IA :**
 
-* **Techniques avancées implémentées :**
-  * [x] **Élagage Alpha-Beta :** Optimisation de la recherche en coupant l'exploration des branches qui n'influencent pas la décision finale du Minimax.
-  * [x] **Table de Transposition et Rote Learning :** Utilisation d'un dictionnaire de hachage global pour stocker les scores des états déjà évalués, évitant la réexploration des sous-branches lors des transpositions.
-  * [x] **Bitboard / Serialization légère :** L'état de la grille matricielle est sérialisé sous forme de chaîne de caractères unidimensionnelle compacte agissant comme une clé d'identification unique et ultra-rapide pour la table de transposition.
-  * [x] **Opening Book (Bibliothèque d'ouvertures) :** Pour la phase de placement (Phase 1), l'IA intègre une stratégie prédéfinie qui priorise immédiatement l'occupation des cases stratégiques majeures, notamment le centre du plateau $(1,1)$, sans déclencher le Minimax pour économiser les ressources processeur.
+* **Facile :** sélection aléatoire parmi les coups légaux.
+* **Moyenne :** joue un coup gagnant immédiat si possible, bloque une menace adverse, prend le centre en ouverture, sinon choisit un coup légal.
+* **Difficile :** utilise Minimax avec élagage Alpha-Beta, priorité au centre en opening book, et une fonction d'évaluation tactique.
+
+**Fonction d'évaluation :**
+
+* `+1000` si l'IA gagne.
+* `-1000` si l'adversaire gagne.
+* Bonus pour deux pions alignés avec une case vide.
+* Malus si l'adversaire possède une menace directe.
+* Bonus de contrôle du centre.
+* Bonus/malus de mobilité en phase de mouvement.
+
+Techniques avancées utilisées :
+
+* **Alpha-Beta pruning :** coupe les branches inutiles de l'arbre de recherche.
+* **Opening book :** l'IA difficile prend le centre si disponible.
+* **Table de transposition :** mémorisation des états évalués côté Python.
+* **Sérialisation compacte :** représentation textuelle légère du plateau pour indexer les états.
+
+---
+
+# Section 6 : Analyses de Performances
+
+Mesures réalisées sur les coups IA pendant le développement :
+
+| Niveau IA | Technique principale | Temps de réponse moyen observé |
+| :--- | :--- | :---: |
+| Facile | Aléatoire | < 1 ms |
+| Moyenne | Heuristique victoire/blocage | < 1 ms |
+| Difficile | Minimax + Alpha-Beta | 1 à 15 ms selon la phase |
+
+Résultats qualitatifs en mode IA vs IA :
+
+* L'IA facile joue légalement mais rate souvent les menaces directes.
+* L'IA moyenne bloque les victoires immédiates et gagne régulièrement contre l'IA facile.
+* L'IA difficile est plus stable en phase de mouvement grâce à la recherche Alpha-Beta.
+
+Autres métriques :
+
+* Profondeur utilisée côté React : jusqu'à 6 demi-coups en placement et 8 demi-coups en mouvement.
+* Le mode démo permet de vérifier rapidement la cohérence des règles et la stabilité des décisions IA.
+* Undo/Redo permet de rejouer des branches de partie et de tester les réponses de l'IA sur un même état.

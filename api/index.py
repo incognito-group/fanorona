@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 import sys
 import os
+import time
 
 # Allow importing your AI script
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -17,6 +18,9 @@ class GameState(BaseModel):
     aiPlayer: int               # 2 (Black/Noir) or 1 (White/Vert)
 
 def convert_1d_to_2d(board1d):
+    if len(board1d) != 9:
+        raise HTTPException(status_code=400, detail="Board must contain exactly 9 cells")
+
     matrix = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
     for index, cell in enumerate(board1d):
         i = index // 3
@@ -28,6 +32,8 @@ def convert_1d_to_2d(board1d):
 
 @app.post("/api/get-move")
 async def get_move(state: GameState):
+    started_at = time.perf_counter()
+
     # 1. Transform React format to Python matrix format
     plateau = convert_1d_to_2d(state.board1D)
     
@@ -42,7 +48,10 @@ async def get_move(state: GameState):
         raise HTTPException(status_code=400, detail="Invalid difficulty level")
 
     if coup is None:
-        return {"hasMove": False}
+        return {
+            "hasMove": False,
+            "durationMs": round((time.perf_counter() - started_at) * 1000)
+        }
 
     # 3. Format structural output for React consumption
     if state.phase == 1:
@@ -50,7 +59,8 @@ async def get_move(state: GameState):
         i, j = coup
         return {
             "hasMove": True,
-            "index": i * 3 + j
+            "index": i * 3 + j,
+            "durationMs": round((time.perf_counter() - started_at) * 1000)
         }
     else:
         # Movement move: ((i1, j1), (i2, j2))
@@ -58,5 +68,6 @@ async def get_move(state: GameState):
         return {
             "hasMove": True,
             "fromIndex": i1 * 3 + j1,
-            "toIndex": i2 * 3 + j2
+            "toIndex": i2 * 3 + j2,
+            "durationMs": round((time.perf_counter() - started_at) * 1000)
         }

@@ -1,105 +1,174 @@
-import React, { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import GameHeader from './components/GameHeader';
 import MainMenu from './components/MainMenu';
 import WinAlert from './components/WinAlert';
 import GameBoard from './components/GameBoard';
-import { ADJACENCY_MAP } from './constants/gameRules';
-import { checkWinCondition } from './core/gameLogic';
+import {
+  applyMoveToBoard,
+  checkWinCondition,
+  chooseAIMove,
+  getLegalMoves,
+  getNextPhase,
+} from './core/gameLogic';
+
+const EMPTY_BOARD = Array(9).fill(null);
+const PLAYER_LABELS = {
+  P1: 'Joueur 1 (Vert)',
+  P2: 'Joueur 2 (Noir)',
+};
+
+const toApiMove = (data, phase) => {
+  if (!data?.hasMove) return null;
+
+  if (phase === 'Placement') {
+    return { type: 'placement', index: data.index };
+  }
+
+  return { type: 'movement', fromIndex: data.fromIndex, toIndex: data.toIndex };
+};
 
 export default function App() {
-  const [gameMode, setGameMode] = useState(null); 
-  const [board, setBoard] = useState(Array(9).fill(null));
-  const [currentPlayer, setCurrentPlayer] = useState('P1'); 
-  const [gamePhase, setGamePhase] = useState('Placement'); 
+  const [gameMode, setGameMode] = useState(null);
+  const [aiDifficulty, setAiDifficulty] = useState('moyenne');
+  const [board, setBoard] = useState(EMPTY_BOARD);
+  const [currentPlayer, setCurrentPlayer] = useState('P1');
+  const [gamePhase, setGamePhase] = useState('Placement');
   const [selectedPiece, setSelectedPiece] = useState(null);
   const [winner, setWinner] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [redoStack, setRedoStack] = useState([]);
+  const [aiThinking, setAiThinking] = useState(false);
+  const [lastAiStats, setLastAiStats] = useState(null);
 
-  const triggerAIMove = async (currentBoard, currentPhase) => {
+  const isAiTurn = useMemo(() => (
+    !winner && (
+      (gameMode === 'ai' && currentPlayer === 'P2')
+      || gameMode === 'demo'
+    )
+  ), [currentPlayer, gameMode, winner]);
+
+  const snapshot = () => ({
+    board,
+    currentPlayer,
+    gamePhase,
+    selectedPiece,
+    winner,
+    lastAiStats,
+  });
+
+  const restoreSnapshot = (state) => {
+    setBoard(state.board);
+    setCurrentPlayer(state.currentPlayer);
+    setGamePhase(state.gamePhase);
+    setSelectedPiece(state.selectedPiece);
+    setWinner(state.winner);
+    setLastAiStats(state.lastAiStats);
+  };
+
+  const commitSnapshot = (state = snapshot()) => {
+    setHistory((items) => [...items, state]);
+    setRedoStack([]);
+  };
+
+  const finishMove = (move, player, sourceBoard = board, sourcePhase = gamePhase) => {
+    const nextBoard = applyMoveToBoard(sourceBoard, move, player);
+    const nextWinner = checkWinCondition(nextBoard, player) ? player : null;
+    const nextPhase = getNextPhase(nextBoard, sourcePhase);
+
+    setBoard(nextBoard);
+    setGamePhase(nextPhase);
+    setSelectedPiece(null);
+    setWinner(nextWinner);
+
+    if (!nextWinner) {
+      setCurrentPlayer(player === 'P1' ? 'P2' : 'P1');
+    }
+
+    return { nextBoard, nextPhase, nextWinner };
+  };
+
+  const requestServerMove = async (sourceBoard, sourcePhase, player) => {
+    const startedAt = performance.now();
+    const response = await fetch('/api/get-move', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        board1D: sourceBoard,
+        difficulty: aiDifficulty,
+        phase: sourcePhase === 'Placement' ? 1 : 2,
+        aiPlayer: player === 'P1' ? 1 : 2,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`AI API returned ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      move: toApiMove(data, sourcePhase),
+      stats: {
+        source: 'API Python',
+        durationMs: data.durationMs ?? Math.round(performance.now() - startedAt),
+      },
+    };
+  };
+
+  const triggerAIMove = async (sourceBoard, sourcePhase, player) => {
+    setAiThinking(true);
+    const beforeAiMove = {
+      board: sourceBoard,
+      currentPlayer: player,
+      gamePhase: sourcePhase,
+      selectedPiece: null,
+      winner: null,
+      lastAiStats,
+    };
+
     try {
-      const response = await fetch('/api/get-move', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          board1D: currentBoard,
-          difficulty: 'difficile', 
-          phase: currentPhase === 'Placement' ? 1 : 2,
-          aiPlayer: 2 
-        })
-      });
+      let move = null;
+      let stats = null;
 
-      const data = await response.json();
-      if (!data.hasMove) return;
-
-      const nextBoard = [...currentBoard];
-
-      if (currentPhase === 'Placement') {
-        nextBoard[data.index] = 'P2';
-        setBoard(nextBoard);
-        
-        if (checkWinCondition(nextBoard, 'P2')) {
-          setWinner('P2');
-          return;
-        }
-        
-        const totalPieces = nextBoard.filter(cell => cell !== null).length;
-        if (totalPieces === 6) {
-          setGamePhase('Movement');
-        }
-        
-        setCurrentPlayer('P1');
-      } else {
-        nextBoard[data.fromIndex] = null;
-        nextBoard[data.toIndex] = 'P2';
-        setBoard(nextBoard);
-
-        if (checkWinCondition(nextBoard, 'P2')) {
-          setWinner('P2');
-          return;
-        }
-        
-        setCurrentPlayer('P1');
+      try {
+        const serverResult = await requestServerMove(sourceBoard, sourcePhase, player);
+        move = serverResult.move;
+        stats = serverResult.stats;
+      } catch {
+        const startedAt = performance.now();
+        move = chooseAIMove(sourceBoard, player, sourcePhase, aiDifficulty);
+        stats = {
+          source: 'IA locale',
+          durationMs: Math.round(performance.now() - startedAt),
+        };
       }
-    } catch (error) {
-      console.error("Failed to fetch AI move:", error);
+
+      if (!move) return;
+
+      commitSnapshot(beforeAiMove);
+      finishMove(move, player, sourceBoard, sourcePhase);
+      setLastAiStats(stats);
+    } finally {
+      setAiThinking(false);
     }
   };
 
-  const handleNodeClick = (index) => {
-    // Bloquer les clics si la partie est finie ou si c'est au tour de l'IA
-    if (winner || (gameMode === 'ai' && currentPlayer === 'P2')) return;
-    
-    if (gamePhase === 'Placement') handlePlacement(index);
-    else if (gamePhase === 'Movement') handleMovement(index);
-  };
+  useEffect(() => {
+    if (!isAiTurn || aiThinking) return undefined;
+
+    const timer = window.setTimeout(() => {
+      triggerAIMove(board, gamePhase, currentPlayer);
+    }, gameMode === 'demo' ? 650 : 250);
+
+    return () => window.clearTimeout(timer);
+    // triggerAIMove is intentionally omitted: it is recreated per render and guarded by aiThinking/isAiTurn.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aiThinking, board, currentPlayer, gameMode, gamePhase, isAiTurn]);
 
   const handlePlacement = (index) => {
     if (board[index] !== null) return;
 
-    const newBoard = [...board];
-    newBoard[index] = currentPlayer;
-    setBoard(newBoard);
-
-    if (checkWinCondition(newBoard, currentPlayer)) {
-      setWinner(currentPlayer);
-      return;
-    }
-
-    // Correction de calcul : utiliser l'état du nouveau plateau simulé
-    const updatedTotalPlaced = newBoard.filter(cell => cell !== null).length;
-    let nextPhase = gamePhase;
-    if (updatedTotalPlaced === 6) {
-      nextPhase = 'Movement';
-      setGamePhase('Movement');
-    }
-
-    if (gameMode === 'ai') {
-      // C'est au tour de l'IA, on passe à P2 et on déclenche l'appel API immédiatement
-      setCurrentPlayer('P2');
-      triggerAIMove(newBoard, nextPhase);
-    } else {
-      // Mode local classique à 2 joueurs
-      setCurrentPlayer(currentPlayer === 'P1' ? 'P2' : 'P1');
-    }
+    commitSnapshot();
+    finishMove({ type: 'placement', index }, currentPlayer);
   };
 
   const handleMovement = (index) => {
@@ -115,38 +184,57 @@ export default function App() {
       return;
     }
 
-    if (clickedCell === null) {
-      const validMoves = ADJACENCY_MAP[selectedPiece];
-      if (validMoves.includes(index)) {
-        const newBoard = [...board];
-        newBoard[selectedPiece] = null;
-        newBoard[index] = currentPlayer;
-        setBoard(newBoard);
-        setSelectedPiece(null);
+    const move = { type: 'movement', fromIndex: selectedPiece, toIndex: index };
+    const isLegal = getLegalMoves(board, currentPlayer, gamePhase).some((legalMove) => (
+      legalMove.type === 'movement'
+      && legalMove.fromIndex === move.fromIndex
+      && legalMove.toIndex === move.toIndex
+    ));
 
-        if (checkWinCondition(newBoard, currentPlayer)) {
-          setWinner(currentPlayer);
-          return;
-        }
-
-        if (gameMode === 'ai') {
-          setCurrentPlayer('P2');
-          triggerAIMove(newBoard, gamePhase);
-        } else {
-          setCurrentPlayer(currentPlayer === 'P1' ? 'P2' : 'P1');
-        }
-      }
+    if (clickedCell === null && isLegal) {
+      commitSnapshot();
+      finishMove(move, currentPlayer);
     } else if (clickedCell === currentPlayer) {
       setSelectedPiece(index);
     }
   };
 
-  const resetGame = () => {
-    setBoard(Array(9).fill(null));
+  const handleNodeClick = (index) => {
+    if (winner || isAiTurn || aiThinking) return;
+
+    if (gamePhase === 'Placement') handlePlacement(index);
+    else handleMovement(index);
+  };
+
+  const resetGame = (nextMode = gameMode) => {
+    setGameMode(nextMode);
+    setBoard(EMPTY_BOARD);
     setCurrentPlayer('P1');
     setGamePhase('Placement');
     setSelectedPiece(null);
     setWinner(null);
+    setHistory([]);
+    setRedoStack([]);
+    setAiThinking(false);
+    setLastAiStats(null);
+  };
+
+  const undoMove = () => {
+    if (history.length === 0 || aiThinking) return;
+
+    const previous = history[history.length - 1];
+    setRedoStack((items) => [snapshot(), ...items]);
+    setHistory((items) => items.slice(0, -1));
+    restoreSnapshot(previous);
+  };
+
+  const redoMove = () => {
+    if (redoStack.length === 0 || aiThinking) return;
+
+    const [next, ...remaining] = redoStack;
+    setHistory((items) => [...items, snapshot()]);
+    setRedoStack(remaining);
+    restoreSnapshot(next);
   };
 
   return (
@@ -154,42 +242,72 @@ export default function App() {
       <GameHeader />
 
       {gameMode === null ? (
-        <MainMenu onSelectMode={setGameMode} />
+        <MainMenu
+          aiDifficulty={aiDifficulty}
+          onDifficultyChange={setAiDifficulty}
+          onSelectMode={(mode) => resetGame(mode)}
+        />
       ) : (
         <main className="w-full max-w-md flex flex-col items-center bg-white border border-zinc-200 rounded-lg p-6 shadow-sm animate-[fadeIn_0.4s_ease-out]">
           <WinAlert winner={winner} />
 
-          <div className="w-full flex justify-between items-center mb-6 text-sm font-mono">
+          <div className="w-full grid grid-cols-2 gap-3 mb-6 text-sm font-mono">
             <div>
               <span className="text-zinc-400">Phase:</span>{' '}
               <span className="text-zinc-700 font-semibold uppercase">{gamePhase}</span>
             </div>
+            <div className="text-right">
+              <span className="text-zinc-400">Mode:</span>{' '}
+              <span className="text-zinc-700 font-semibold uppercase">
+                {gameMode === 'local' ? 'Local' : gameMode === 'demo' ? 'Demo IA' : aiDifficulty}
+              </span>
+            </div>
             {!winner && (
-              <div>
+              <div className="col-span-2">
                 <span className="text-zinc-400">Tour:</span>{' '}
                 <span className={`font-bold ${currentPlayer === 'P1' ? 'text-emerald-600' : 'text-zinc-800'}`}>
-                  {currentPlayer === 'P1' ? 'Joueur 1 (Vert)' : 'Joueur 2 (IA / Noir)'}
+                  {aiThinking ? 'Calcul IA...' : PLAYER_LABELS[currentPlayer]}
                 </span>
+              </div>
+            )}
+            {lastAiStats && (
+              <div className="col-span-2 text-xs text-zinc-400">
+                Derniere IA: {lastAiStats.source} - {lastAiStats.durationMs} ms
               </div>
             )}
           </div>
 
-          <GameBoard 
-            board={board} 
-            selectedPiece={selectedPiece} 
-            onNodeClick={handleNodeClick} 
+          <GameBoard
+            board={board}
+            disabled={isAiTurn || aiThinking}
+            selectedPiece={selectedPiece}
+            onNodeClick={handleNodeClick}
           />
 
-          <div className="w-full flex gap-3 mt-6">
+          <div className="w-full grid grid-cols-2 gap-3 mt-6">
             <button
-              onClick={resetGame}
-              className="flex-1 py-2 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-600 text-xs font-mono rounded uppercase tracking-wider transition-colors"
+              onClick={undoMove}
+              disabled={history.length === 0 || aiThinking}
+              className="py-2 bg-white border border-zinc-200 hover:bg-zinc-50 disabled:opacity-40 disabled:hover:bg-white text-zinc-600 text-xs font-mono rounded uppercase tracking-wider transition-colors"
+            >
+              Undo
+            </button>
+            <button
+              onClick={redoMove}
+              disabled={redoStack.length === 0 || aiThinking}
+              className="py-2 bg-white border border-zinc-200 hover:bg-zinc-50 disabled:opacity-40 disabled:hover:bg-white text-zinc-600 text-xs font-mono rounded uppercase tracking-wider transition-colors"
+            >
+              Redo
+            </button>
+            <button
+              onClick={() => resetGame(gameMode)}
+              className="py-2 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-600 text-xs font-mono rounded uppercase tracking-wider transition-colors"
             >
               Recommencer
             </button>
             <button
-              onClick={() => { resetGame(); setGameMode(null); }}
-              className="px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-500 text-xs font-mono rounded uppercase tracking-wider transition-colors"
+              onClick={() => resetGame(null)}
+              className="py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-500 text-xs font-mono rounded uppercase tracking-wider transition-colors"
             >
               Menu
             </button>

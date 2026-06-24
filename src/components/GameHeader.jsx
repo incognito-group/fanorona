@@ -1,5 +1,3 @@
-import React from 'react';
-
 export default function GameHeader() {
   return (
     <header className="w-full flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-zinc-200 pb-4 text-xs tracking-wider text-zinc-500 uppercase">
