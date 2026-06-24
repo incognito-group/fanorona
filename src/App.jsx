@@ -10,6 +10,7 @@ import {
   getLegalMoves,
   getNextPhase,
 } from './core/gameLogic';
+import GameFooter from './components/GameFooter';
 
 const EMPTY_BOARD = Array(9).fill(null);
 const PLAYER_LABELS = {
@@ -314,6 +315,8 @@ export default function App() {
           </div>
         </main>
       )}
+
+      <GameFooter />
     </div>
   );
 }
