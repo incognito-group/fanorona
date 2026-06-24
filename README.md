@@ -5,11 +5,11 @@
 
 | Nom Complet | Numéro d'étudiant | Classe | Rôle précis pour ce Hackathon |
 | :--- | :--- | :--- | :--- |
-| RAKOTOMALALA Princy | N° 04 | IGGLIA 4A | Lead AI |
-| RANDRIATAHINARIMANANA Tendry Ny Avo Gabriel | N° 18 | IGGLIA 4A | Backend Architect |
-| NOMENJANAHARY Nambinintsoa Gilbert | N° 21 | Master 1 | Expert règles du jeu |
-| RABENJARISON Fenomalala Safidy | N° 23 | IGGLIA 4A | Expert optimisation Alpha-Beta |
-| SAROBIDINIRINA Tsizehena Bienvenue | N° 58 | IGGLIA 4A | Frontend / Lead DevOps |
+| RAKOTOMALALA Princy | N° 04 | IGGLIA 4A | Backend / Algo |
+| RANDRIATAHINARIMANANA Tendry Ny Avo Gabriel | N° 18 | IGGLIA 4A | Backend / Algo |
+| NOMENJANAHARY Nambinintsoa Gilbert | N° 21 | Master 1 | Backend / Algo |
+| RABENJARISON Fenomalala Safidy | N° 23 | IGGLIA 4A | Expert Backend / Algo |
+| SAROBIDINIRINA Tsizehena Bienvenue | N° 58 | IGGLIA 4A | Frontend / DevOps |
 
 ---
 
@@ -48,12 +48,11 @@ npm run dev
 
 # Section 4 : Outils d'Aide IA Utilisés
 
-L'équipe a utilisé des assistants IA comme ChatGPT et GitHub Copilot pour accélérer les parties répétitives du hackathon, tout en gardant la validation humaine sur les règles du Fanoron-telo.
+L'équipe a utilisé des assistants IA comme ChatGPT et Gemini pour accélérer les parties répétitives du hackathon, tout en gardant la validation humaine sur les règles du Fanoron-telo.
 
 Utilisations principales :
 
 * Génération rapide de structures React et composants d'interface.
-* Aide à la formulation du Minimax, de l'Alpha-Beta et de la fonction d'évaluation.
 * Débogage des transitions entre phase de placement et phase de mouvement.
 * Génération de tests mentaux et de scénarios de victoire.
 * Rédaction et amélioration de la documentation du projet.
@@ -62,35 +61,29 @@ Le gain principal a été la réduction du temps passé sur le boilerplate et le
 
 ---
 
-# Section 5 : Modélisation et Algorithmes de l'IA du Jeu
+# Section 5 : Modélisation et Algorithmes
 
-**Représentation de l'état du plateau :** le frontend représente le plateau par un tableau 1D de 9 cases (`P1`, `P2` ou `null`). L'API Python convertit ce tableau en matrice 3x3 pour faciliter les calculs de coordonnées. Les lignes gagnantes sont stockées dans une liste de 8 combinaisons : 3 lignes, 3 colonnes et 2 diagonales.
+* **Représentation de l'état du plateau**:
+Nous avons choisi une approche matricielle (grille matricielle 3×3) où chaque intersection est repérée par ses coordonnées (i,j) avec i,j ∈ {0,1,2}. Cette approche correspond fidèlement à la géométrie réelle du plateau et permet des calculs mathématiques directs pour les règles de déplacement, évitant ainsi l'utilisation de listes simples ou de structures de données lourdes.
 
-**Validation des mouvements :** en phase de placement, toute case libre est valide. En phase de mouvement, un pion ne peut aller que vers une intersection adjacente libre. Les connexions du plateau sont représentées par une table d'adjacence côté React et par une fonction géométrique côté Python.
+* **Validation géométrique des mouvements**:
+Au lieu d'utiliser un dictionnaire statique écrit à la main, les connexions physiques du Fanoron-telo sont calculées dynamiquement par l'algorithme. Celui-ci vérifie les distances de Manhattan et de Tchebychev pour s'assurer que le déplacement ne dépasse pas une case.
 
-**Niveaux d'IA :**
+Cette vérification est combinée à une condition de parité mathématique : un déplacement diagonal n'est autorisé que si la somme des coordonnées de la case de départ respecte la condition (i + j) mod 2 == 0. Cela restreint géométriquement et automatiquement les diagonales au centre (1,1) et aux quatre coins, conformément au dessin traditionnel du jeu.
 
-* **Facile :** sélection aléatoire parmi les coups légaux.
-* **Moyenne :** joue un coup gagnant immédiat si possible, bloque une menace adverse, prend le centre en ouverture, sinon choisit un coup légal.
-* **Difficile :** utilise Minimax avec élagage Alpha-Beta, priorité au centre en opening book, et une fonction d'évaluation tactique.
+* **Fonction d'évaluation du Minimax**:
+Notre fonction d'évaluation mathématique attribue un score numérique à chaque état final ou intermédiaire du plateau :
 
-**Fonction d'évaluation :**
+* Plus 1000 (Gain maximum) : Si l'état mène à un alignement de 3 pions de l'IA (Victoire).
+* Moins 1000 (Pénalité maximum) : Si l'état permet un alignement de 3 pions de l'adversaire humain (Défaite).
+* 0 (Neutre) : Si la configuration actuelle ne présente aucun alignement gagnant à ce stade de l'arbre.
+L'objectif du Minimax est de maximiser ce score pour l'IA tout en supposant que l'adversaire cherchera à le minimiser.
 
-* `+1000` si l'IA gagne.
-* `-1000` si l'adversaire gagne.
-* Bonus pour deux pions alignés avec une case vide.
-* Malus si l'adversaire possède une menace directe.
-* Bonus de contrôle du centre.
-* Bonus/malus de mobilité en phase de mouvement.
+* **Techniques Avancées Implémentées**:
 
-Techniques avancées utilisées :
-
-* **Alpha-Beta pruning :** coupe les branches inutiles de l'arbre de recherche.
-* **Opening book :** l'IA difficile prend le centre si disponible.
-* **Table de transposition :** mémorisation des états évalués côté Python.
-* **Sérialisation compacte :** représentation textuelle légère du plateau pour indexer les états.
-
----
+* Table de Transposition et Rote Learning : Afin d'optimiser l'exploration de l'arbre de décision du Minimax, nous avons implémenté une table de transposition globale sous forme de dictionnaire de hachage. Dès qu'un état du plateau est évalué, son score est stocké en mémoire. Si l'algorithme rencontre une transposition (un état identique atteint par un chemin différent), il extrait directement la valeur numérique par "rote learning" sans réexplorer les sous-branches.
+* Bitboard / Bit-by-bit léger : L'état de la grille matricielle est sérialisé sous forme de chaîne de caractères unidimensionnelle compacte . Cette chaîne agit comme une clé d'identification unique et ultra-légère pour accélérer les opérations de lecture et d'écriture dans la table de transposition.
+* Opening Book (Bibliothèque d'ouvertures) : Pour la phase initiale de placement, l'IA intègre une stratégie d'ouverture prédéfinie qui priorise immédiatement l'occupation des cases stratégiques majeures (comme le centre du plateau en 1,1) sans déclencher l'algorithme Minimax, économisant ainsi les ressources processeur au coup d'envoi.
 
 # Section 6 : Analyses de Performances
 
